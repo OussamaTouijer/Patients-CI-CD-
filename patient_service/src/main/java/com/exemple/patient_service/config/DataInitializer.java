@@ -38,7 +38,7 @@ public class DataInitializer {
             List<Patient> patients = new ArrayList<>();
             
             // Noms marocains courants
-            String[] noms = {"Alaoui", "Bennamyni", "Cherkaoui", "Daoudi", "El Amrani", "Fassi", "Gharbi", "Hassani",
+            String[] noms = {"Alaoui", "Touijer", "Cherkaoui", "Daoudi", "El Amrani", "Fassi", "Gharbi", "Hassani",
                            "Idrissi", "Jabri", "Khalil", "Lahlou", "Mansouri", "Naciri", "Ouali", "Pacha", 
                            "Qadiri", "Rahmani", "Saidi", "Tazi", "Uthman", "Vaziri", "Wahbi", "Yousfi", "Zahraoui"};
                            
