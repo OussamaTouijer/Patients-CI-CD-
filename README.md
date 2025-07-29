@@ -50,28 +50,33 @@ http://localhost:8888
 
 ### 🏥 Patient Service Endpoints
 
+#### 🔄 Routage Dynamique
+L'API Gateway utilise un **routage dynamique** avec découverte automatique via Eureka. Les services sont accessibles via:
+- **Format**: `/[nom-service-lowercase]/[endpoint]`
+- **Exemple**: `/patient-service/patients`
+
 #### CRUD Operations
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `POST` | `/patients` | Créer un nouveau patient |
-| `GET` | `/patients` | Obtenir tous les patients |
-| `GET` | `/patients/{id}` | Obtenir un patient par ID |
-| `PUT` | `/patients/{id}` | Mettre à jour un patient |
-| `DELETE` | `/patients/{id}` | Supprimer un patient |
+| Méthode | Endpoint Gateway | Endpoint Direct | Description |
+|---------|------------------|-----------------|-------------|
+| `POST` | `/patient-service/patients` | `http://localhost:9006/patients` | Créer un nouveau patient |
+| `GET` | `/patient-service/patients` | `http://localhost:9006/patients` | Obtenir tous les patients |
+| `GET` | `/patient-service/patients/{id}` | `http://localhost:9006/patients/{id}` | Obtenir un patient par ID |
+| `PUT` | `/patient-service/patients/{id}` | `http://localhost:9006/patients/{id}` | Mettre à jour un patient |
+| `DELETE` | `/patient-service/patients/{id}` | `http://localhost:9006/patients/{id}` | Supprimer un patient |
 
 #### Recherche Avancée
-| Méthode | Endpoint | Description | Paramètres |
-|---------|----------|-------------|------------|
-| `GET` | `/patients/search/nss/{nss}` | Recherche par NSS | `nss`: Numéro sécurité sociale |
-| `GET` | `/patients/search?query={term}` | Recherche par nom/prénom | `query`: Terme de recherche |
-| `GET` | `/patients/search/birthdate?debut={date1}&fin={date2}` | Recherche par période | `debut`, `fin`: Format YYYY-MM-DD |
-| `GET` | `/patients/search/bloodgroup/{group}` | Recherche par groupe sanguin | `group`: Ex: A+, B-, O+ |
+| Méthode | Endpoint Gateway | Description | Paramètres |
+|---------|------------------|-------------|------------|
+| `GET` | `/patient-service/patients/search/nss/{nss}` | Recherche par NSS | `nss`: Numéro sécurité sociale |
+| `GET` | `/patient-service/patients/search?query={term}` | Recherche par nom/prénom | `query`: Terme de recherche |
+| `GET` | `/patient-service/patients/search/birthdate?debut={date1}&fin={date2}` | Recherche par période | `debut`, `fin`: Format YYYY-MM-DD |
+| `GET` | `/patient-service/patients/search/bloodgroup/{group}` | Recherche par groupe sanguin | `group`: Ex: A+, B-, O+ |
 
 ### 📋 Exemples d'utilisation
 
 #### 1. Créer un patient
 ```bash
-curl -X POST http://localhost:8888/patients \
+curl -X POST http://localhost:8888/patient-service/patients \
   -H "Content-Type: application/json" \
   -d '{
     "nom": "Dupont",
@@ -87,17 +92,17 @@ curl -X POST http://localhost:8888/patients \
 
 #### 2. Obtenir tous les patients
 ```bash
-curl http://localhost:8888/patients
+curl http://localhost:8888/patient-service/patients
 ```
 
 #### 3. Rechercher par nom
 ```bash
-curl "http://localhost:8888/patients/search?query=Dupont"
+curl "http://localhost:8888/patient-service/patients/search?query=Dupont"
 ```
 
 #### 4. Rechercher par groupe sanguin
 ```bash
-curl http://localhost:8888/patients/search/bloodgroup/A+
+curl http://localhost:8888/patient-service/patients/search/bloodgroup/A+
 ```
 
 ## 🚀 Démarrage du Projet
@@ -173,6 +178,44 @@ mvn spring-boot:run
 
 ## 🔧 Configuration
 
+### 🔄 Configuration du Routage Dynamique
+
+L'API Gateway utilise la **découverte automatique des services** via Eureka pour le routage dynamique.
+
+#### Configuration Gateway (application.yml)
+```yaml
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true                    # Active la découverte automatique
+          lower-case-service-id: true      # Convertit les noms en minuscules
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedHeaders: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+```
+
+#### Versions Compatibles
+| Composant | Version | Remarque |
+|-----------|---------|----------|
+| Spring Boot | 3.1.12 | Version compatible avec le routage dynamique |
+| Spring Cloud | 2022.0.4 | Version testée et stable |
+| Java | 21 | Support complet |
+
+#### Fonctionnement du Routage
+1. **Enregistrement**: Les services s'enregistrent automatiquement dans Eureka
+2. **Découverte**: L'API Gateway interroge Eureka pour les services disponibles
+3. **Routage**: Les requêtes `/[service-name]/[endpoint]` sont automatiquement routées
+4. **Load Balancing**: Répartition automatique si plusieurs instances
+
 ### Configuration centralisée
 Les configurations sont stockées dans le repository Git:
 - **Repository**: https://github.com/OussamaTouijer/patient-config-repos.git
@@ -208,6 +251,44 @@ Failed to configure a DataSource: 'url' attribute is not specified
 2. Tester l'endpoint: http://localhost:9999/patient_service/default
 3. Redémarrer le service après le Config Service
 
+### 🔄 Problèmes de Routage Dynamique
+
+#### 4. Erreur "Empty reply from server" via Gateway
+```
+curl: (52) Empty reply from server
+```
+**Solution**:
+1. Vérifier que le routage dynamique est activé dans `application.yml`
+2. Utiliser l'URL correcte: `/patient-service/patients` (service en minuscules)
+3. Vérifier les versions de compatibilité (Spring Boot 3.1.12 + Spring Cloud 2022.0.4)
+
+#### 5. Erreur "NoSuchMethodError: headerSet()"
+```
+java.lang.NoSuchMethodError: 'java.util.Set org.springframework.http.HttpHeaders.headerSet()'
+```
+**Solution**: Problème de compatibilité de versions
+1. Utiliser Spring Boot 3.1.12 (pas 3.3.x)
+2. Utiliser Spring Cloud 2022.0.4 (pas 2023.x)
+3. Rebuilder le projet: `mvn clean install`
+
+#### 6. Service accessible directement mais pas via Gateway
+**Diagnostic**:
+```bash
+# Tester le service direct
+curl http://localhost:9006/patients
+
+# Tester via Gateway
+curl http://localhost:8888/patient-service/patients
+
+# Vérifier l'enregistrement Eureka
+curl http://localhost:8761/eureka/apps
+```
+
+**Solution**:
+1. Vérifier que tous les services sont UP dans Eureka
+2. Attendre 30 secondes après le démarrage pour la propagation
+3. Redémarrer le Gateway Service en dernier
+
 ## 🔐 Sécurité
 
 ### CORS Configuration
@@ -223,8 +304,18 @@ L'API Gateway est configurée pour accepter les requêtes cross-origin:
 4. Implémenter rate limiting
 5. Sécuriser les endpoints Actuator
 
-## 📈 Évolutions Futures
+## 📈 Fonctionnalités Implémentées et Évolutions
 
+### ✅ Fonctionnalités Actuelles
+- [x] **Routage Dynamique** - API Gateway avec découverte automatique via Eureka
+- [x] Architecture microservices complète (Config, Discovery, Gateway, Patient Service)
+- [x] Configuration centralisée avec Git repository
+- [x] Base de données PostgreSQL avec JPA/Hibernate
+- [x] Documentation Swagger/OpenAPI
+- [x] Monitoring avec Actuator endpoints
+- [x] Support CORS pour les applications web
+
+### 🚀 Évolutions Futures
 - [ ] Authentification et autorisation (JWT/OAuth2)
 - [ ] Service de notification
 - [ ] Cache distribué (Redis)
