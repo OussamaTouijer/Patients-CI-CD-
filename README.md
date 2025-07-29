@@ -452,9 +452,54 @@ docker-compose exec patient-service sh
 - [ ] 📊 Monitoring avancé (Micrometer + Prometheus + Grafana)
 - [ ] 🛡️ Circuit breaker (Resilience4j)
 - [ ] 🧪 Tests d'intégration et tests de charge
-- [ ] 🚀 CI/CD Pipeline (Jenkins) avec déploiement automatisé
+- [x] 🚀 **CI/CD Pipeline (Jenkins)** avec déploiement automatisé
 - [ ] ☸️ Déploiement Kubernetes (K8s)
 - [ ] 📈 Métriques business et alerting
+
+## 🚀 CI/CD avec Jenkins
+
+### 📋 Pipeline Automatisé
+
+Le projet inclut un **pipeline Jenkins complet** qui automatise :
+
+- ✅ **Checkout & Build** - Clone du code et compilation Maven
+- ✅ **Tests Unitaires** - Exécution avec rapports JUnit et Jacoco
+- ✅ **Analyse de Sécurité** - Scan OWASP des dépendances
+- ✅ **Build Docker** - Construction et publication des images
+- ✅ **Déploiement Auto** - Mise à jour de l'environnement de test
+- ✅ **Tests d'Intégration** - Validation end-to-end des APIs
+
+### 🔧 Configuration Jenkins
+
+#### Accès Jenkins
+- **URL**: http://localhost:2001
+- **Repository**: https://github.com/OussamaTouijer/Patients-CI-CD-.git
+- **Pipeline**: Déclenché automatiquement sur push `main`
+
+#### Scripts de configuration fournis
+```bash
+# Configuration automatique (Linux/Mac)
+chmod +x scripts/setup-jenkins.sh
+./scripts/setup-jenkins.sh
+
+# Configuration automatique (Windows)
+scripts\setup-jenkins.bat
+
+# Correction accès Docker si nécessaire
+./scripts/fix-jenkins-docker.sh
+```
+
+#### Guide complet
+📚 **Voir [JENKINS-SETUP.md](JENKINS-SETUP.md)** pour la configuration détaillée des credentials et plugins.
+
+### 📊 Rapports Générés
+
+Le pipeline génère automatiquement :
+- 🧪 **Rapports de tests** JUnit avec métriques détaillées
+- 📈 **Couverture de code** Jacoco (objectif: ≥ 80%)
+- 🔐 **Rapport de sécurité** OWASP Dependency Check
+- 🐳 **Images Docker** publiées automatiquement
+- 📋 **Logs détaillés** de déploiement et tests d'intégration
 
 ## 👥 Équipe de Développement
 
