@@ -1,0 +1,131 @@
+# Docker Compose pour les microservices Patient
+
+services:
+  # Base de données PostgreSQL
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: patient-postgres
+    environment:
+      POSTGRES_DB: patient-db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: oussama
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - patient-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Discovery Service (Eureka Server)
+  discovery-service:
+    build: 
+      context: ./discovery_service
+      dockerfile: Dockerfile
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    networks:
+      - patient-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Config Service
+  config-service:
+    build: 
+      context: ./config_service
+      dockerfile: Dockerfile
+    container_name: config-service
+    ports:
+      - "9999:9999"
+    networks:
+      - patient-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9999/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Patient Service
+  patient-service:
+    build: 
+      context: ./patient_service
+      dockerfile: Dockerfile
+    container_name: patient-service
+    ports:
+      - "9006:9006"
+    networks:
+      - patient-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/patient-db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=oussama
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://config-service:9999
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9006/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # API Gateway
+  gateway-service:
+    build: 
+      context: ./gateway_service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "8888:8888"
+    networks:
+      - patient-network
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://config-service:9999
+    depends_on:
+      discovery-service:
+        condition: service_healthy
+      config-service:
+        condition: service_healthy
+      patient-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 80s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  patient-network:
+    driver: bridge
