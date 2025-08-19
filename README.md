@@ -527,3 +527,70 @@ Le pipeline génère automatiquement :
 ---
 
 📝 **Note**: Ce projet démontre une architecture microservices **production-ready** avec Spring Cloud, incluant tous les aspects essentiels : containerisation, monitoring, service discovery, et gestion d'erreurs robuste.
+
+
+flowchart LR
+
+
+Messaging[(Kafka / RabbitMQ)]
+DBs[(PostgreSQL + Redis)]
+FileStore[(S3 / Bucket)]
+WebSocket[WebSocket Gateway / PubSub]
+ExternalFCM[Firebase Cloud Messaging]
+ExternalMaps[Maps API]
+OCRsvc[OCR (mobile/native or backend)]
+
+
+Mobile -->|REST / GraphQL| APIGW
+WebClient -->|REST| APIGW
+
+
+APIGW -->|OAuth2 / OIDC| Auth
+APIGW -->|REST| UserSvc
+APIGW -->|REST| CodeSvc
+APIGW -->|REST| PlayerSvc
+APIGW -->|REST| ExchangeSvc
+APIGW -->|REST| BackOfficeSvc
+
+
+UserSvc --> DBs
+CodeSvc --> DBs
+PlayerSvc --> DBs
+RewardSvc --> DBs
+BackOfficeSvc --> DBs
+AnalyticsSvc --> DBs
+
+
+PlayerSvc -->|store images| FileStore
+BackOfficeSvc -->|upload images / import codes| FileStore
+
+
+CodeSvc -->|publish event: code.scanned / code.validated| Messaging
+CodeSvc -->|verify code| PlayerSvc
+CodeSvc -->|publish event: code.winner| Messaging
+
+
+ExchangeSvc -->|events: exchange.*| Messaging
+RewardSvc -->|events: reward.*| Messaging
+
+
+Messaging --> NotificationSvc
+NotificationSvc -->|push via| ExternalFCM
+NotificationSvc -->|push status| AnalyticsSvc
+
+
+WebSocket -->|real-time status| Mobile
+ExchangeSvc --> WebSocket
+UserSvc --> WebSocket
+
+
+APIGW -->|maps| ExternalMaps
+Mobile -->|OCR capture| OCRsvc
+OCRsvc --> CodeSvc
+
+
+Auth -->|issue JWT| APIGW
+APIGW -->|JWT| Services
+
+
+click DBs href "#" "PostgreSQL (primary) / Redis (cache/session)"
